@@ -11,9 +11,9 @@ export default new Router({
     {
       path: '/',
       name: 'Canvas',
-      component: Canvas,
-    }
-    ,{
+      component: Canvas
+    },
+    {
       path: '/gps',
       name: 'Gps',
       component: Gps

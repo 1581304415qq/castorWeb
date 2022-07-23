@@ -38,15 +38,34 @@
         {{ value }} {{ key }} [0x{{ key.toString(16) }}]
       </p>
     </div>
+    <div class="BaiduMap">
+      <baidu-map
+        :center="center"
+        :zoom="zoom"
+        :scroll-whell-zoom="true"
+        style="width: 600px; height: 600px"
+        @ready="handler"
+      >
+      <bm-maker :position="positionMap"></bm-maker>
+      </baidu-map>
+    </div>
   </div>
 </template>
 
 <script>
+import Vue from "vue";
 import GPS from "gps";
+import BaiduMap from "vue-baidu-map";
+Vue.use(BaiduMap, { ak: "kL4sVc9KqpqoLMPsipuhCTjsx3esNiRv" });
 export default {
   name: "gps",
   data() {
     return {
+      positionMap: null,
+      address: null,
+      center: { lng: 0, lat: 0 },
+      zoom: 11,
+
       count: 0,
       rcvdata: [],
       result: { 11: "111111" },
@@ -68,6 +87,7 @@ export default {
         查询csq: 23,
         保存配置: 21,
         重新启动: 32,
+        下载更新: 140,
       },
       configs: {
         1: { lab: "工作模式", value: "0" },
@@ -81,37 +101,37 @@ export default {
       },
       services: [
         "SERVICE_HEART",
-        " APP_INFO",
-        " SERVICE_R_WKMODE",
-        " SERVICE_W_WKMODE",
-        " SERVICE_R_NETMOD",
-        " SERVICE_W_NETMOD",
-        " SERVICE_R_IPMOD",
-        " SERVICE_W_IPMOD",
-        " SERVICE_R_DBGMOD",
-        " SERVICE_W_DBGMOD",
-        " SERVICE_R_TEL",
-        " SERVICE_W_TEL",
-        " SERVICE_R_UART",
-        " SERVICE_W_UART",
-        " SERVICE_R_SYSPWD",
-        " SERVICE_W_SYSPWD",
-        " SERVICE_R_TOKEN",
-        " SERVICE_W_TOKEN",
-        " SERVICE_R_GPRS_STATE",
-        " SERVICE_W_GPRS_STATE",
-        " SERVICE_R_SERVER_IP",
-        " SERVICE_W_SERVER_IP",
-        " SERVICE_R_NTRIP_IP",
-        " SERVICE_W_NTRIP_IP",
-        " SERVICE_R_GNSS_NTRIP_MOUNT",
-        " SERVICE_W_GNSS_NTRIP_MOUNT",
-        " SERVICE_R_GNSS_NTRIP_ACCONT",
-        " SERVICE_W_GNSS_NTRIP_ACCONT",
-        " SERVICE_R_GNSS_NTRIP_PASSWD",
-        " SERVICE_W_GNSS_NTRIP_PASSWD",
-        " SERVICE_R_HBTIME",
-        " SERVICE_W_HBTIME",
+        "APP_INFO",
+        "SERVICE_R_WKMODE",
+        "SERVICE_W_WKMODE",
+        "SERVICE_R_NETMOD",
+        "SERVICE_W_NETMOD",
+        "SERVICE_R_IPMOD",
+        "SERVICE_W_IPMOD",
+        "SERVICE_R_DBGMOD",
+        "SERVICE_W_DBGMOD",
+        "SERVICE_R_TEL",
+        "SERVICE_W_TEL",
+        "SERVICE_R_UART",
+        "SERVICE_W_UART",
+        "SERVICE_R_SYSPWD",
+        "SERVICE_W_SYSPWD",
+        "SERVICE_R_TOKEN",
+        "SERVICE_W_TOKEN",
+        "SERVICE_R_GPRS_STATE",
+        "SERVICE_W_GPRS_STATE",
+        "SERVICE_R_SERVER_IP",
+        "SERVICE_W_SERVER_IP",
+        "SERVICE_R_NTRIP_IP",
+        "SERVICE_W_NTRIP_IP",
+        "SERVICE_R_GNSS_NTRIP_MOUNT",
+        "SERVICE_W_GNSS_NTRIP_MOUNT",
+        "SERVICE_R_GNSS_NTRIP_ACCONT",
+        "SERVICE_W_GNSS_NTRIP_ACCONT",
+        "SERVICE_R_GNSS_NTRIP_PASSWD",
+        "SERVICE_W_GNSS_NTRIP_PASSWD",
+        "SERVICE_R_HBTIME",
+        "SERVICE_W_HBTIME",
         // ,SERVICE_R_APN
         // ,SERVICE_W_APN
         // ,SERVICE_R_IDLTIME
@@ -133,7 +153,6 @@ export default {
         "SERVICE_FILE_COMD",
         "SERVICE_GPIO",
         "SERVICE_ADC",
-        ///
         "SERVICE_BT",
         "SERVICE_CDA",
         "SERVICE_SD",
@@ -154,6 +173,11 @@ export default {
     this.websock.close(); //离开路由之后断开websocket连接
   },
   methods: {
+    handler({ BMap, map }) {
+      this.center.lng = 116.404;
+      this.center.lat = 38.917;
+      this.zoom = this.zoom;
+    },
     submitcomd(arg) {
       let arr =
         this.command_hex == ""
@@ -218,6 +242,8 @@ export default {
           this.gps.update(Buffer.from(redata.data).toString());
         this.gps.on("data", (parsed) => {
           console.log("gps parse:", parsed);
+          this.positionMap = new BMap.Point(116.404, 38.917);
+          this.center = new BMap.Point(116.404, 38.917);
         });
       } catch (e) {}
     },
