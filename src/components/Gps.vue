@@ -46,7 +46,6 @@
         style="width: 600px; height: 600px"
         @ready="handler"
       >
-      <bm-maker :position="positionMap"></bm-maker>
       </baidu-map>
     </div>
   </div>
@@ -61,10 +60,10 @@ export default {
   name: "gps",
   data() {
     return {
-      positionMap: null,
+      map:null,
       address: null,
       center: { lng: 0, lat: 0 },
-      zoom: 11,
+      zoom: 13,
 
       count: 0,
       rcvdata: [],
@@ -173,10 +172,32 @@ export default {
     this.websock.close(); //离开路由之后断开websocket连接
   },
   methods: {
+    translateCallback(data) {
+      console.log("translateCallback", data.points[0]);
+      if (data.status === 0) {
+        var marker = new BMap.Marker(data.points[0]);
+        this.map.addOverlay(marker);
+        var label = new BMap.Label("转换后的百度坐标（正确）", {
+          offset: new BMap.Size(20, -10),
+        });
+        marker.setLabel(label); //添加百度label
+        this.map.setCenter(data.points[0]);
+      }
+    },
+    translate(position){
+      var convertor = new BMap.Convertor();
+      var pointArr = [];
+      pointArr.push(position);
+      convertor.translate(pointArr, 1, 5, this.translateCallback);
+    },
     handler({ BMap, map }) {
-      this.center.lng = 116.404;
-      this.center.lat = 38.917;
+      this.map = map;
+
+      this.center.lng = 116.643608473;
+      this.center.lat = 25.13384557;
       this.zoom = this.zoom;
+
+      this.translate(this.center);
     },
     submitcomd(arg) {
       let arr =
@@ -242,7 +263,6 @@ export default {
           this.gps.update(Buffer.from(redata.data).toString());
         this.gps.on("data", (parsed) => {
           console.log("gps parse:", parsed);
-          this.positionMap = new BMap.Point(116.404, 38.917);
           this.center = new BMap.Point(116.404, 38.917);
         });
       } catch (e) {}
