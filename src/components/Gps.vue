@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="gps_view">
     <div class="container">
       <div class="content">
         <div class="control">
@@ -30,23 +30,25 @@
         </div>
       </div>
     </div>
-    <div class="data">
-      <p class="" v-for="(value, key) in rcvdata" :key="key">{{ value }}</p>
+    <div class="gps">
+      <div class="data">
+        <p class="" v-for="(value, key) in rcvdata" :key="key">{{ value }}</p>
+      </div>
+      <div class="BaiduMap">
+        <baidu-map
+          :center="center"
+          :zoom="zoom"
+          :scroll-whell-zoom="true"
+          style="width: 600px; height: 600px"
+          @ready="handler"
+        >
+        </baidu-map>
+      </div>
     </div>
-    <div>
+    <div class="services">
       <p v-for="(value, key) in services" :key="key">
         {{ value }} {{ key }} [0x{{ key.toString(16) }}]
       </p>
-    </div>
-    <div class="BaiduMap">
-      <baidu-map
-        :center="center"
-        :zoom="zoom"
-        :scroll-whell-zoom="true"
-        style="width: 600px; height: 600px"
-        @ready="handler"
-      >
-      </baidu-map>
     </div>
   </div>
 </template>
@@ -60,11 +62,11 @@ export default {
   name: "gps",
   data() {
     return {
-      map:null,
+      map: null,
       address: null,
       center: { lng: 0, lat: 0 },
       zoom: 13,
-
+      marker: null,
       count: 0,
       rcvdata: [],
       result: { 11: "111111" },
@@ -172,19 +174,51 @@ export default {
     this.websock.close(); //离开路由之后断开websocket连接
   },
   methods: {
+    longitudeToOnenetFormat(lon_temp) {
+      let lon_Onenet = 0;
+      let dd_int = 0;
+      let mm_int = 0;
+      let lon_Onenet_double = 0;
+
+      lon_Onenet = lon_temp * 100000; //转换为整数
+
+      dd_int = lon_Onenet / 10000000; //取出dd
+
+      mm_int = lon_Onenet % 10000000; //取出MM部分
+
+      lon_Onenet_double = dd_int + mm_int / 60 / 100000; //换算为Onenet格式
+      return lon_Onenet_double;
+    },
+    latitudeToOnenetFormat(lat_temp) {
+      let lat_Onenet = 0;
+      let dd_int = 0;
+      let mm_int = 0;
+
+      let lat_Onenet_double = 0;
+
+      lat_Onenet = lat_temp * 100000; //转换为整数
+
+      dd_int = lat_Onenet / 10000000; //取出dd
+
+      mm_int = lat_Onenet % 10000000; //取出MM部分
+
+      lat_Onenet_double = dd_int + mm_int / 60 / 100000; //换算为Onenet格式
+      return lat_Onenet_double;
+    },
     translateCallback(data) {
       console.log("translateCallback", data.points[0]);
       if (data.status === 0) {
+        this.map.clearOverlays();
         var marker = new BMap.Marker(data.points[0]);
-        this.map.addOverlay(marker);
         var label = new BMap.Label("转换后的百度坐标（正确）", {
           offset: new BMap.Size(20, -10),
         });
         marker.setLabel(label); //添加百度label
+        this.map.addOverlay(marker);
         this.map.setCenter(data.points[0]);
       }
     },
-    translate(position){
+    translate(position) {
       var convertor = new BMap.Convertor();
       var pointArr = [];
       pointArr.push(position);
@@ -192,9 +226,9 @@ export default {
     },
     handler({ BMap, map }) {
       this.map = map;
-
-      this.center.lng = 116.643608473;
-      this.center.lat = 25.13384557;
+      //116.737958,25.225886 myposition
+      this.center.lng = 116.10726807; //116.643608473，25.13384557
+      this.center.lat = 25.223075; //25.13384557
       this.zoom = this.zoom;
 
       this.translate(this.center);
@@ -230,7 +264,15 @@ export default {
 
       // Add an event listener on all protocols
       this.gps.on("data", (parsed) => {
-        console.log(parsed);
+        console.log("gps parse:", parsed);
+        // console.log("gps parse:", parsed);
+        if (parsed.type == "GGA") {
+          console.log("gps parse:", parsed);
+
+          this.center.lat = parsed.lat;
+          this.center.lng = parsed.lon;
+          this.translate(this.center);
+        }
       });
     },
     websocketonopen() {
@@ -247,7 +289,7 @@ export default {
       // this.rcvdata+=e.data.toString('hex')
       try {
         const redata = JSON.parse(e.data);
-        console.log(redata);
+        // console.log(redata);
         if (redata.data.length == 0) return;
         // this.rcvdata.push(Buffer.from(redata.data));
         // gps数据
@@ -261,10 +303,6 @@ export default {
         this.gpsData = redata;
         if (redata.proto == 144)
           this.gps.update(Buffer.from(redata.data).toString());
-        this.gps.on("data", (parsed) => {
-          console.log("gps parse:", parsed);
-          this.center = new BMap.Point(116.404, 38.917);
-        });
       } catch (e) {}
     },
     websocketsend(Data) {
@@ -280,6 +318,9 @@ export default {
 </script>
 
 <style>
+.gps_view {
+  padding: 20px;
+}
 .container {
   display: flex;
 }
@@ -335,6 +376,10 @@ export default {
   justify-content: flex-start;
   width: 30px;
 }
+.gps {
+  display: flex;
+  padding-top: 20px;
+}
 .data {
   display: flex;
   width: 50%;
@@ -342,5 +387,18 @@ export default {
   font-size: 5px;
   flex-direction: column;
   overflow: hidden;
+}
+.services {
+  display: flex;
+  height: 400px;
+  font-size: 5px;
+  flex-direction: column;
+  flex-wrap: wrap;
+}
+.services p {
+  display: flex;
+  padding-top: 20px;
+  width: 250px;
+  padding: auto;
 }
 </style>
